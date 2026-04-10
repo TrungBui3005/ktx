@@ -1,5 +1,5 @@
 <?php
-include 'connect.php'; // Nhớ kiểm tra đúng tên file kết nối của ông
+include 'connect.php'; 
 session_start();
 
 // Nếu đã đăng nhập rồi thì cho vào index luôn
@@ -12,27 +12,38 @@ $error = "";
 
 if (isset($_POST['login'])) {
     $username = mysqli_real_escape_string($conn, $_POST['username']);
-    $password = $_POST['password']; // Ở đây tôi để pass thô, nếu ông dùng password_hash thì cần verify nhé
+    $password = $_POST['password']; 
 
     if (empty($username) || empty($password)) {
         $error = "Vui lòng nhập đầy đủ thông tin!";
     } else {
-        // Truy vấn kiểm tra tài khoản và vai trò từ bảng tai_khoan
-        $sql = "SELECT * FROM tai_khoan WHERE ten_dang_nhap = '$username' AND mat_khau = '$password'";
+        // 1. Chỉ truy vấn theo username để lấy thông tin tài khoản
+        $sql = "SELECT * FROM tai_khoan WHERE ten_dang_nhap = '$username'";
         $result = mysqli_query($conn, $sql);
 
         if (mysqli_num_rows($result) == 1) {
             $user = mysqli_fetch_assoc($result);
-            
-            // Lưu thông tin vào Session
-            $_SESSION['ten_dang_nhap'] = $user['ten_dang_nhap'];
-            $_SESSION['vai_tro'] = $user['vai_tro'];
+    
+            $check_pass = false;
+            if (password_verify($password, $user['mat_khau'])) {
+                $check_pass = true; // Khớp mật khẩu mã hóa
+            } elseif ($password === $user['mat_khau']) {
+                $check_pass = true; // Khớp mật khẩu thô (cho tài khoản admin cũ)
+            }
 
-            // Chuyển hướng về trang chủ
-            header("Location: index.php");
-            exit();
+            if ($check_pass) {
+                // Lưu thông tin vào Session
+                $_SESSION['ten_dang_nhap'] = $user['ten_dang_nhap'];
+                $_SESSION['vai_tro'] = $user['vai_tro'];
+
+                // Chuyển hướng về trang chủ
+                header("Location: index.php");
+                exit();
+            } else {
+                $error = "Mật khẩu không chính xác!";
+            }
         } else {
-            $error = "Tên đăng nhập hoặc mật khẩu không đúng!";
+            $error = "Tên đăng nhập không tồn tại!";
         }
     }
 }
@@ -51,7 +62,7 @@ if (isset($_POST['login'])) {
         .login-card { width: 100%; max-width: 400px; padding: 20px; border: none; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         .btn-primary { background-color: #2c3e50; border: none; }
         .btn-primary:hover { background-color: #1a252f; }
-    </small></style>
+    </style>
 </head>
 <body>
 
@@ -72,7 +83,7 @@ if (isset($_POST['login'])) {
                 <label class="form-label small fw-bold">Tên đăng nhập</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-person"></i></span>
-                    <input type="text" name="username" class="form-control" placeholder="Nhập username..." required>
+                    <input type="text" name="username" class="form-control" placeholder="Mã sinh viên hoặc tên admin" required>
                 </div>
             </div>
             
@@ -80,7 +91,7 @@ if (isset($_POST['login'])) {
                 <label class="form-label small fw-bold">Mật khẩu</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-key"></i></span>
-                    <input type="password" name="password" class="form-control" placeholder="Nhập mật khẩu..." required>
+                    <input type="password" name="password" class="form-control" placeholder="Mật khẩu mặc định: 123456" required>
                 </div>
             </div>
 
